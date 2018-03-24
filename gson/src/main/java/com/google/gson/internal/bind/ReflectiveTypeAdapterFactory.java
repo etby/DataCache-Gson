@@ -33,6 +33,10 @@ import com.google.gson.reflect.TypeToken;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonToken;
 import com.google.gson.stream.JsonWriter;
+
+import org.etby.datacache.CacheHelper;
+import org.etby.datacache.Cacheable;
+
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Type;
@@ -211,6 +215,12 @@ public final class ReflectiveTypeAdapterFactory implements TypeAdapterFactory {
 
       T instance = constructor.construct();
 
+      // 获取Helper
+      CacheHelper helper = null;
+      if (instance instanceof Cacheable) {
+        helper = ((Cacheable) instance).getHelper();
+      }
+
       try {
         in.beginObject();
         while (in.hasNext()) {
@@ -220,6 +230,11 @@ public final class ReflectiveTypeAdapterFactory implements TypeAdapterFactory {
             in.skipValue();
           } else {
             field.read(in, instance);
+
+            // 当数据设置成功时 更新Cache
+            if (helper != null) {
+              helper.notifyCacheChanged(helper.getCF(name));
+            }
           }
         }
       } catch (IllegalStateException e) {
